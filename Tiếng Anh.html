@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title id="page-title">Ancient Tales</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&family=Dancing+Script:wght@700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* GIỮ NGUYÊN TOÀN BỘ CSS CỦA BẠN */
+        :root {
+            --text-dark: #2c3e50;
+            --accent-gold: #f1c40f;
+            --royal-purple: #4a148c;
+            --drop-shadow: 0 15px 45px rgba(0, 0, 0, 0.6);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Comfortaa', sans-serif;
+            background: linear-gradient(-45deg, #4a148c, #880e4f, #1a1a2e);
+            background-attachment: fixed;
+            color: white;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #stars-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .header {
+            text-align: center;
+            padding: 15px 10px;
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-family: 'Dancing Script', cursive;
+            font-size: clamp(1.8rem, 6vw, 3rem);
+            margin: 0;
+            color: var(--accent-gold);
+        }
+
+        .author-tag {
+            font-size: 0.75rem;
+            color: var(--accent-gold);
+            opacity: 0.9;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .story-title-vn {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        #story-selector,
+        #voice-select {
+            margin-top: 8px;
+            /* 1. Nền cực mỏng để nhìn xuyên thấu nhưng vẫn nổi chữ */
+            background: rgba(255, 255, 255, 0.05);
+            /* 2. Viền vàng mảnh sang trọng */
+            border: 1px solid rgba(241, 196, 15, 0.4);
+            color: var(--accent-gold);
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            width: 90%;
+            max-width: 320px;
+
+            /* 3. Xử lý hiển thị */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            outline: none;
+            cursor: pointer;
+            text-align: center;
+
+            /* 4. Hiệu ứng kính làm nền sao mờ ảo phía sau */
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+
+            /* 5. Thêm mũi tên nhỏ bên phải để người dùng biết là menu */
+            background-image: linear-gradient(45deg, transparent 50%, var(--accent-gold) 50%),
+                linear-gradient(135deg, var(--accent-gold) 50%, transparent 50%);
+            background-position: calc(100% - 20px) calc(1em + 2px),
+                calc(100% - 15px) calc(1em + 2px);
+            background-size: 5px 5px, 5px 5px;
+            background-repeat: no-repeat;
+        }
+
+        /* Quan trọng: Sửa màu cho các dòng Option bên trong */
+        #story-selector option,
+        #voice-select option {
+            /* Trình duyệt không cho phép option trong suốt hoàn toàn, 
+       nên ta dùng màu tối nhất của background để giả lập trong suốt */
+            background-color: #1a1a2e;
+            color: white;
+            padding: 10px;
+        }
+
+        /* Hiệu ứng khi nhấn vào */
+        #story-selector:focus,
+        #voice-select:focus {
+            border-color: var(--accent-gold);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .gallery-wrapper {
+            flex: 1;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            display: flex;
+            align-items: center;
+            overflow: visible;
+        }
+
+        .gallery-container {
+            display: flex;
+            align-items: center;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            width: 100%;
+            height: 100%;
+            scrollbar-width: none;
+            cursor: grab;
+        }
+
+        .gallery-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .snap-spacer {
+            flex: 0 0 calc(50% - 150px);
+        }
+
+        .flashcard {
+            flex: 0 0 300px;
+            height: 450px;
+            margin: 0 30px;
+            perspective: 1000px;
+            scroll-snap-align: center;
+            scroll-snap-stop: always;
+            transition: all 0.6s ease;
+            opacity: 0.2;
+            transform: scale(0.8);
+            filter: blur(4px);
+        }
+
+        .flashcard.active {
+            opacity: 1;
+            transform: scale(1.05);
+            filter: blur(0);
+            z-index: 5;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .flashcard.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front,
+        .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 35px;
+            border-radius: 30px;
+            background: #ffffff;
+            border: 4px solid var(--accent-gold);
+            color: var(--text-dark);
+            text-align: center;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background: #fdfdf5;
+        }
+
+        .type-tag {
+            position: absolute;
+            top: 25px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #fff;
+            background: var(--royal-purple);
+            padding: 4px 12px;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+
+        .english {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1a237e;
+        }
+
+        .vietnamese {
+            font-size: 1.1rem;
+            color: #3e2723;
+            font-style: italic;
+        }
+
+        .audio-icon {
+            margin-top: 30px;
+            background: var(--accent-gold);
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .audio-icon svg {
+            width: 22px;
+            fill: var(--royal-purple);
+        }
+
+        .footer-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 15px 0;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        .nav-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(241, 196, 15, 0.15);
+            border: 1.5px solid var(--accent-gold);
+            color: var(--accent-gold);
+            cursor: pointer;
+        }
+
+        .counter {
+            background: rgba(241, 196, 15, 0.2);
+            border: 1px solid var(--accent-gold);
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--accent-gold);
+            font-weight: 700;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .footer-hint {
+            font-size: 0.7rem;
+            text-align: center;
+            opacity: 0.6;
+            padding-bottom: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="stars-canvas"></canvas>
+
+    <div class="header">
+        <div class="author-tag">Coded & Designed by DuGiaVăn</div>
+
+        <select id="story-selector" onchange="loadStory(this.value)">
+            <option value="televisionUnit7">Unit 7: Television (Truyền hình)</option>
+            <option value="sportsAndGamesUnit8">Unit 8: Sports and Games (Thể thao)</option>
+        </select>
+
+        <h1 id="main-title">Tiếng Anh</h1>
+        <div class="story-title-vn" id="sub-title">Tiếng Anh lớp thầy Văn</div>
+        <select id="voice-select"></select>
+    </div>
+
+    <div class="gallery-wrapper">
+        <div class="gallery-container" id="gallery">
+        </div>
+    </div>
+
+    <div class="footer-controls">
+        <button class="nav-btn prev" onclick="moveSlide(-1)">❮</button>
+        <div class="counter" id="card-counter">1 / 1</div>
+        <button class="nav-btn next" onclick="moveSlide(1)">❯</button>
+    </div>
+
+    <div class="footer-hint">✨ Vuốt ngang hoặc dùng nút để chuyển thẻ ✨</div>
+
+    <script>
+        // 1. DATABASE NHIỀU TRUYỆN
+        const allStories = {
+            televisionUnit7: {
+                titleEn: "Unit 7: Television - Full Knowledge Base",
+                titleVi: "Bài 7: Truyền hình - Tổng hợp kiến thức đầy đủ",
+                data: [
+                    // --- NHÓM TỪ VỰNG CHƯƠNG TRÌNH & TRUYỀN HÌNH ---
+                    { en: "Music talent show", vi: "Chương trình tài năng âm nhạc", scene: "Vocab: Programme" },
+                    { en: "Animated film", vi: "Phim hoạt hình điện ảnh", scene: "Vocab: Programme" },
+                    { en: "Cartoon", vi: "Phim hoạt hình truyền hình", scene: "Vocab: Programme" },
+                    { en: "Channel", vi: "Kênh truyền hình", scene: "Vocab: Television" },
+                    { en: "Comedy", vi: "Phim hài", scene: "Vocab: Programme" },
+                    { en: "Game show", vi: "Chương trình trò chơi truyền hình", scene: "Vocab: Programme" },
+                    { en: "Educational programme", vi: "Chương trình giáo dục", scene: "Vocab: Programme" },
+                    { en: "News report", vi: "Bản tin thời sự", scene: "Vocab: Programme" },
+                    { en: "Viewer", vi: "Người xem truyền hình", scene: "Vocab: Person" },
+                    { en: "Character", vi: "Nhân vật (trong phim/truyện)", scene: "Vocab: Film" },
+                    { en: "Live", vi: "Trực tiếp (phát sóng)", scene: "Vocab: Television" },
+
+                    // --- NHÓM TÍNH TỪ MIÊU TẢ ---
+                    { en: "Interesting", vi: "Thú vị", scene: "Adj: Description" },
+                    { en: "Wonderful", vi: "Tuyệt vời", scene: "Adj: Description" },
+                    { en: "Funny", vi: "Hài hước", scene: "Adj: Description" },
+                    { en: "Clever", vi: "Thông minh, nhanh trí", scene: "Adj: Description" },
+                    { en: "Educational", vi: "Có tính giáo dục", scene: "Adj: Description" },
+                    { en: "Popular", vi: "Phổ biến, được yêu thích", scene: "Adj: Description" },
+                    { en: "Boring", vi: "Nhàm chán", scene: "Adj: Description" },
+                    { en: "Cute", vi: "Đáng yêu, dễ thương", scene: "Adj: Description" },
+
+                    // --- NHÓM ĐỘNG TỪ ---
+                    { en: "Watch", vi: "Xem (TV, phim)", scene: "Verb: Action" },
+                    { en: "Prefer", vi: "Thích hơn", scene: "Verb: Action" },
+                    { en: "Learn", vi: "Học hỏi", scene: "Verb: Action" },
+                    { en: "Laugh", vi: "Cười", scene: "Verb: Action" },
+                    { en: "Teach", vi: "Dạy bảo", scene: "Verb: Action" },
+                    { en: "Happen", vi: "Xảy ra, diễn ra", scene: "Verb: Action" },
+                    { en: "Repeat", vi: "Nhắc lại", scene: "Verb: Action" },
+
+                    // --- CÁC TỪ QUAN TRỌNG KHÁC ---
+                    { en: "Twice a week", vi: "Hai lần một tuần", scene: "Phrase: Frequency" },
+                    { en: "National", vi: "Thuộc về quốc gia", scene: "Adj: General" },
+                    { en: "International", vi: "Quốc tế", scene: "Adj: General" },
+
+                    // --- NHÓM 1: DANH TỪ VỀ CHƯƠNG TRÌNH (NOUNS - PROGRAMMES) ---
+                    { en: "The Voice Kids is a music talent show.", vi: "The Voice Kids là một chương trình tài năng âm nhạc.", scene: "Vocab: Music talent show" },
+                    { en: "Phong likes animated films like The Lion King.", vi: "Phong thích phim hoạt hình điện ảnh như phim Vua Sư Tử.", scene: "Vocab: Animated film" },
+                    { en: "Jerry the mouse is a famous character in a cartoon.", vi: "Chuột Jerry là một nhân vật nổi tiếng trong phim hoạt hình truyền hình.", scene: "Vocab: Cartoon" },
+                    { en: "VTV7 is a popular channel with many educational programmes.", vi: "VTV7 là một kênh truyền hình phổ biến với nhiều chương trình giáo dục.", scene: "Vocab: Channel" },
+                    { en: "A comedy is a show that makes people laugh a lot.", vi: "Phim hài là một chương trình khiến mọi người cười rất nhiều.", scene: "Vocab: Comedy" },
+                    { en: "Children are Always Right is a fun game show for kids.", vi: "Trẻ em luôn đúng là một chương trình trò chơi truyền hình vui nhộn cho trẻ nhỏ.", scene: "Vocab: Game show" },
+                    { en: "A programme can be a film, a show, or a news report.", vi: "Một chương trình có thể là một bộ phim, một buổi diễn hoặc một bản tin.", scene: "Vocab: Programme" },
+                    { en: "Discovery Channel is a great educational programme for students.", vi: "Discovery Channel là một chương trình giáo dục tuyệt vời cho học sinh.", scene: "Vocab: Educational programme" },
+
+                    // --- NHÓM 2: TÍNH TỪ MIÊU TẢ (ADJECTIVES) ---
+                    { en: "That music talent show on TV is very interesting.", vi: "Chương trình tài năng âm nhạc đó trên TV rất thú vị.", scene: "Adj: Interesting" },
+                    { en: "I love animated films because they are wonderful.", vi: "Tớ yêu phim hoạt hình vì chúng thật tuyệt vời.", scene: "Adj: Wonderful" },
+                    { en: "Comedies are funny and make the viewers laugh.", vi: "Phim hài thì hài hước và làm cho người xem cười.", scene: "Adj: Funny" },
+                    { en: "Jerry is a clever character who always escapes Tom.", vi: "Jerry là một nhân vật thông minh, người luôn thoát khỏi Tom.", scene: "Adj: Clever" },
+                    { en: "This channel has many educational English lessons.", vi: "Kênh này có nhiều bài học tiếng Anh có tính giáo dục.", scene: "Adj: Educational" },
+                    { en: "Cartoon Network is the most popular channel for children.", vi: "Cartoon Network là kênh truyền hình phổ biến nhất dành cho trẻ em.", scene: "Adj: Popular" },
+                    { en: "This film is very boring. Let's change the channel.", vi: "Bộ phim này rất nhàm chán. Hãy chuyển kênh khác đi.", scene: "Adj: Boring" },
+                    { en: "Cat Kitty is a very cute and lovely character.", vi: "Mèo Kitty là một nhân vật rất đáng yêu và dễ thương.", scene: "Adj: Cute" },
+
+                    // --- NHÓM 3: CÁC DANH TỪ KHÁC (OTHER NOUNS) ---
+                    { en: "A viewer is a person who watches television.", vi: "Người xem là một người theo dõi truyền hình.", scene: "Noun: Viewer" },
+                    { en: "A character can be a person or an animal in a film.", vi: "Một nhân vật có thể là một người hoặc một con vật trong phim.", scene: "Noun: Character" },
+                    { en: "We can watch the football match live on TV.", vi: "Chúng ta có thể xem trận bóng đá trực tiếp trên TV.", scene: "Noun/Adj: Live" },
+
+                    // --- NHÓM 4: ĐỘNG TỪ (VERBS) ---
+                    { en: "What are you watching, Hung? - I'm watching a cartoon.", vi: "Bạn đang xem gì thế Hùng? - Tớ đang xem hoạt hình.", scene: "Verb: Watch" },
+                    { en: "Listen carefully and repeat the words.", vi: "Hãy nghe cẩn thận và nhắc lại các từ.", scene: "Verb: Listen / Repeat" },
+                    { en: "Read the conversation and answer the questions.", vi: "Đọc đoạn hội thoại và trả lời các câu hỏi.", scene: "Verb: Read" },
+                    { en: "I like animated films, but my brother prefers comedies.", vi: "Tớ thích phim hoạt hình, nhưng em trai tớ thích phim hài hơn.", scene: "Verb: Like / Prefer" },
+                    { en: "I love watching films with my family at the weekend.", vi: "Tớ yêu việc xem phim cùng gia đình vào cuối tuần.", scene: "Verb: Love" },
+                    { en: "Do you know any famous English programmes?", vi: "Bạn có biết chương trình tiếng Anh nổi tiếng nào không?", scene: "Verb: Know" },
+                    { en: "We learn a lot about nature from this channel.", vi: "Chúng ta học được rất nhiều về thiên nhiên từ kênh này.", scene: "Verb: Learn" },
+                    { en: "Comedies make people laugh a lot.", vi: "Phim hài làm cho mọi người cười rất nhiều.", scene: "Verb: Make" },
+                    { en: "Educational programmes teach children many things.", vi: "Các chương trình giáo dục dạy cho trẻ em nhiều thứ.", scene: "Verb: Teach" },
+                    { en: "Watch this programme at the same time it happens.", vi: "Xem chương trình này vào đúng thời điểm nó diễn ra.", scene: "Verb: Happen" },
+                    { en: "Phong and Hung are talking about their favorite shows.", vi: "Phong và Hùng đang nói chuyện về các chương trình yêu thích của họ.", scene: "Verb: Talk" },
+                    { en: "Where do you play football? - In the yard.", vi: "Bạn chơi bóng đá ở đâu? - Ở ngoài sân.", scene: "Verb: Play" },
+
+                    // --- NHÓM 5: TỪ ĐỂ HỎI & CẤU TRÚC (WH-QUESTIONS & STRUCTURE) ---
+                    { en: "What programme do you often watch? - I often watch cartoons.", vi: "Bạn thường xem chương trình nào? - Tớ thường xem phim hoạt hình.", scene: "Structure: What" },
+                    { en: "How often do you watch TV? - Twice a week.", vi: "Bạn xem TV thường xuyên thế nào? - Hai lần một tuần.", scene: "Wh: How often" },
+                    { en: "Where do you watch TV? - In the living room.", vi: "Bạn xem TV ở đâu? - Ở trong phòng khách.", scene: "Wh: Where" },
+                    { en: "Who do you like the most in Doraemon? - Nobita.", vi: "Bạn thích ai nhất trong phim Doraemon? - Nobita.", scene: "Wh: Who" },
+                    { en: "Why do you like this film? - Because it's funny.", vi: "Tại sao bạn thích bộ phim này? - Vì nó rất buồn cười.", scene: "Wh: Why" },
+                    { en: "When do you watch TV? - After I finish my homework.", vi: "Khi nào bạn xem TV? - Sau khi tớ làm xong bài tập về nhà.", scene: "Wh: When" },
+                    { en: "How many channels are there on this TV?", vi: "Có bao nhiêu kênh truyền hình trên cái TV này vậy?", scene: "Wh: How many" },
+
+                    // --- NHÓM 6: LIÊN TỪ & NGỮ ÂM (CONJUNCTIONS & PRONUNCIATION) ---
+                    { en: "I like cartoons and I watch them every day.", vi: "Tớ thích hoạt hình và tớ xem chúng mỗi ngày.", scene: "Grammar: And" },
+                    { en: "I watch TV, but my little brother prefers cartoons.", vi: "Tớ xem TV, nhưng em trai tớ lại thích hoạt hình hơn.", scene: "Grammar: But" },
+                    { en: "I want to see the film, so I turn on the TV.", vi: "Tớ muốn xem phim, vì vậy tớ bật TV lên.", scene: "Grammar: So" },
+                    { en: "Sound /θ/: theatre, earth, both, mouth, through.", vi: "Âm /θ/ (không rung): rạp hát, trái đất, cả hai, miệng, xuyên qua.", scene: "Phonetics: /θ/" },
+                    { en: "Sound /ð/: there, them, than, they, weather.", vi: "Âm /ð/ (có rung): ở đó, họ, hơn, họ (chủ ngữ), thời tiết.", scene: "Phonetics: /ð/" },
+
+                    // --- NHÓM 7: SỰ THẬT THÚ VỊ (FACTS) ---
+                    { en: "Interesting fact: Pokémon comes from Japan.", vi: "Sự thật thú vị: Pokémon có nguồn gốc từ Nhật Bản.", scene: "Fact: Pokémon" },
+                    { en: "In Iceland, there was no TV on Thursdays before 1986.", vi: "Ở Iceland, đã từng không có truyền hình vào các ngày thứ Năm trước năm 1986.", scene: "Fact: Iceland TV" }
+                ]
+            },
+            grammarUnit7: {
+                titleEn: "Unit7: Questions and Conjunctions",
+                titleVi: "Bài: Từ để hỏi và Liên từ",
+                data: [
+                    // --- PHẦN 1: TỪ ĐỂ HỎI (WH-QUESTIONS) ---
+
+                    // Cấp độ 1: Từ đơn (Nghĩa và chức năng)
+                    { en: "What", vi: "Cái gì / Gì (Hỏi về sự vật, sự việc)", scene: "Wh-Vocabulary" },
+                    { en: "When", vi: "Khi nào (Hỏi về thời gian)", scene: "Wh-Vocabulary" },
+                    { en: "Where", vi: "Ở đâu (Hỏi về nơi chốn)", scene: "Wh-Vocabulary" },
+                    { en: "Who", vi: "Ai (Hỏi về người)", scene: "Wh-Vocabulary" },
+                    { en: "Why", vi: "Tại sao (Hỏi về lý do)", scene: "Wh-Vocabulary" },
+                    { en: "How many", vi: "Bao nhiêu (Hỏi về số lượng)", scene: "Wh-Vocabulary" },
+                    { en: "How often", vi: "Có thường xuyên không (Hỏi về tần suất)", scene: "Wh-Vocabulary" },
+
+                    // Cấp độ 2: Cụm từ / Câu ngắn (Đầy đủ cho từng từ)
+                    { en: "What's that?", vi: "Cái đó là cái gì?", scene: "Wh-Phrases" },
+                    { en: "When is it?", vi: "Nó khi nào thế?", scene: "Wh-Phrases" },
+                    { en: "Where is it?", vi: "Nó ở đâu?", scene: "Wh-Phrases" },
+                    { en: "Who is it?", vi: "Ai đó?", scene: "Wh-Phrases" },
+                    { en: "Why is that?", vi: "Tại sao lại như vậy?", scene: "Wh-Phrases" },
+                    { en: "How many hours?", vi: "Bao nhiêu giờ?", scene: "Wh-Phrases" },
+                    { en: "How often?", vi: "Có thường xuyên không?", scene: "Wh-Phrases" },
+
+
+                    // --- BỔ SUNG 20 VÍ DỤ CHO PHẦN WH-ADVANCED ---
+
+                    // What (Cái gì)
+                    { en: "What is your favorite subject at school?", vi: "Môn học yêu thích của bạn ở trường là gì?", scene: "Wh-Advanced" },
+                    { en: "What do you usually have for breakfast?", vi: "Bạn thường ăn gì vào bữa sáng?", scene: "Wh-Advanced" },
+                    { en: "What are they doing in the garden?", vi: "Họ đang làm gì trong vườn thế?", scene: "Wh-Advanced" },
+
+                    // When (Khi nào)
+                    { en: "When do you have English classes?", vi: "Khi nào bạn có tiết học tiếng Anh?", scene: "Wh-Advanced" },
+                    { en: "When is your birthday?", vi: "Sinh nhật của bạn là khi nào?", scene: "Wh-Advanced" },
+                    { en: "When does the football match start?", vi: "Khi nào trận đấu bóng đá bắt đầu?", scene: "Wh-Advanced" },
+
+                    // Where (Ở đâu)
+                    { en: "Where do you live?", vi: "Bạn sống ở đâu?", scene: "Wh-Advanced" },
+                    { en: "Where are my books, Mom?", vi: "Sách của con ở đâu thế mẹ?", scene: "Wh-Advanced" },
+                    { en: "Where can I buy a map of the city?", vi: "Tôi có thể mua bản đồ thành phố ở đâu?", scene: "Wh-Advanced" },
+
+                    // Who (Ai)
+                    { en: "Who is your English teacher?", vi: "Ai là giáo viên tiếng Anh của bạn?", scene: "Wh-Advanced" },
+                    { en: "Who are you talking to on the phone?", vi: "Bạn đang nói chuyện với ai trên điện thoại thế?", scene: "Wh-Advanced" },
+                    { en: "Who is the tallest student in your class?", vi: "Ai là học sinh cao nhất trong lớp của bạn?", scene: "Wh-Advanced" },
+
+                    // Why (Tại sao)
+                    { en: "Why are you late for school today?", vi: "Tại sao hôm nay bạn đi học muộn thế?", scene: "Wh-Advanced" },
+                    { en: "Why do we need to learn English?", vi: "Tại sao chúng ta cần học tiếng Anh?", scene: "Wh-Advanced" },
+                    { en: "Why is she so happy today?", vi: "Tại sao hôm nay cô ấy hạnh phúc thế?", scene: "Wh-Advanced" },
+
+                    // How many (Bao nhiêu - số lượng)
+                    { en: "How many students are there in your class?", vi: "Có bao nhiêu học sinh trong lớp của bạn?", scene: "Wh-Advanced" },
+                    { en: "How many languages can you speak?", vi: "Bạn có thể nói được bao nhiêu ngôn ngữ?", scene: "Wh-Advanced" },
+                    { en: "How many apples do you want to buy?", vi: "Bạn muốn mua bao nhiêu quả táo?", scene: "Wh-Advanced" },
+
+                    // How often (Tần suất)
+                    { en: "How often do you go to the library?", vi: "Bạn có thường xuyên đi đến thư viện không?", scene: "Wh-Advanced" },
+                    { en: "How often does he play video games?", vi: "Anh ấy có thường xuyên chơi trò chơi điện tử không?", scene: "Wh-Advanced" },
+
+                    // --- PHẦN 2: LIÊN TỪ (CONJUNCTIONS) ---
+
+                    // Cấp độ 1: Từ đơn
+                    { en: "And", vi: "Và (Thêm thông tin)", scene: "Conj-Vocabulary" },
+                    { en: "But", vi: "Nhưng (Sự đối lập)", scene: "Conj-Vocabulary" },
+                    { en: "So", vi: "Vì vậy / Cho nên (Kết quả)", scene: "Conj-Vocabulary" },
+
+                    // --- BỔ SUNG VÍ DỤ CẤP ĐỘ 2: CỤM LIÊN KẾT NGẮN (CONJUNCTIONS) ---
+
+                    // --- BỔ SUNG THÊM VÍ DỤ CẤP ĐỘ 2: LIÊN TỪ AND ---
+
+                    { en: "Pens and pencils", vi: "Bút mực và bút chì", scene: "Conj-Phrases" },
+                    { en: "Bread and milk", vi: "Bánh mì và sữa", scene: "Conj-Phrases" },
+                    { en: "Cats and dogs", vi: "Mèo và chó", scene: "Conj-Phrases" },
+                    { en: "Father and mother", vi: "Cha và mẹ", scene: "Conj-Phrases" },
+                    { en: "Black and white", vi: "Đen và trắng", scene: "Conj-Phrases" },
+
+                    { en: "Big and tall", vi: "To và cao", scene: "Conj-Phrases" },
+                    { en: "Fast and dangerous", vi: "Nhanh và nguy hiểm", scene: "Conj-Phrases" },
+                    { en: "Rich and famous", vi: "Giàu có và nổi tiếng", scene: "Conj-Phrases" },
+                    { en: "Quiet and peaceful", vi: "Yên tĩnh và thanh bình", scene: "Conj-Phrases" },
+                    { en: "New and modern", vi: "Mới và hiện đại", scene: "Conj-Phrases" },
+
+                    { en: "Running and jumping", vi: "Chạy và nhảy", scene: "Conj-Phrases" },
+                    { en: "Singing and dancing", vi: "Hát và nhảy múa", scene: "Conj-Phrases" },
+                    { en: "Cooking and cleaning", vi: "Nấu ăn và dọn dẹp", scene: "Conj-Phrases" },
+                    { en: "Listen and repeat", vi: "Nghe và lặp lại", scene: "Conj-Phrases" },
+                    { en: "Buy and sell", vi: "Mua và bán", scene: "Conj-Phrases" },
+
+                    { en: "Day and night", vi: "Ngày và đêm", scene: "Conj-Phrases" },
+                    { en: "Summer and winter", vi: "Mùa hè và mùa đông", scene: "Conj-Phrases" },
+                    { en: "Cities and countries", vi: "Các thành phố và các quốc gia", scene: "Conj-Phrases" },
+                    { en: "Health and happiness", vi: "Sức khỏe và hạnh phúc", scene: "Conj-Phrases" },
+                    { en: "Questions and answers", vi: "Câu hỏi và câu trả lời", scene: "Conj-Phrases" },
+
+                    // --- BỔ SUNG THÊM VÍ DỤ CẤP ĐỘ 2: LIÊN TỪ BUT & SO ---
+
+                    // Liên từ BUT (Sự đối lập / Bất ngờ)
+                    { en: "Poor but honest", vi: "Nghèo nhưng trung thực", scene: "Conj-Phrases" },
+                    { en: "Slow but sure", vi: "Chậm nhưng chắc chắn", scene: "Conj-Phrases" },
+                    { en: "Ugly but kind", vi: "Xấu xí nhưng tốt bụng", scene: "Conj-Phrases" },
+                    { en: "Sad but hopeful", vi: "Buồn nhưng đầy hy vọng", scene: "Conj-Phrases" },
+                    { en: "Short but smart", vi: "Thấp nhưng thông minh", scene: "Conj-Phrases" },
+                    { en: "Cold but sunny", vi: "Lạnh nhưng có nắng", scene: "Conj-Phrases" },
+                    { en: "Noisy but fun", vi: "Ồn ào nhưng vui vẻ", scene: "Conj-Phrases" },
+                    { en: "Simple but effective", vi: "Đơn giản nhưng hiệu quả", scene: "Conj-Phrases" },
+                    { en: "Expensive but worth it", vi: "Đắt tiền nhưng đáng giá", scene: "Conj-Phrases" },
+                    { en: "Scary but exciting", vi: "Đáng sợ nhưng hào hứng", scene: "Conj-Phrases" },
+
+                    // Liên từ SO (Nguyên nhân -> Kết quả)
+                    { en: "Thirsty so drinking water", vi: "Khát nên đang uống nước", scene: "Conj-Phrases" },
+                    { en: "Dark so turning on the light", vi: "Trời tối nên đang bật đèn", scene: "Conj-Phrases" },
+                    { en: "Hot so opening the window", vi: "Nóng nên đang mở cửa sổ", scene: "Conj-Phrases" },
+                    { en: "Dirty so washing", vi: "Bẩn nên đang giặt/rửa", scene: "Conj-Phrases" },
+                    { en: "Bored so watching TV", vi: "Chán nên đang xem TV", scene: "Conj-Phrases" },
+                    { en: "Sleepy so going to bed", vi: "Buồn ngủ nên đi ngủ", scene: "Conj-Phrases" },
+                    { en: "Lost so asking for help", vi: "Bị lạc nên đang hỏi giúp đỡ", scene: "Conj-Phrases" },
+                    { en: "Full so stopping eating", vi: "No rồi nên đang ngừng ăn", scene: "Conj-Phrases" },
+                    { en: "Fast so winning", vi: "Nhanh nên đang chiến thắng", scene: "Conj-Phrases" },
+                    { en: "Rich so buying a car", vi: "Giàu nên đang mua xe hơi", scene: "Conj-Phrases" },
+
+                    // Cụm hỗn hợp bổ sung
+                    { en: "Clean and tidy", vi: "Sạch sẽ và gọn gàng", scene: "Conj-Phrases" },
+                    { en: "Big but light", vi: "To nhưng lại nhẹ", scene: "Conj-Phrases" },
+                    { en: "Dark so scared", vi: "Trời tối nên thấy sợ", scene: "Conj-Phrases" },
+                    { en: "Study and play", vi: "Học và chơi", scene: "Conj-Phrases" },
+                    { en: "Busy but happy", vi: "Bận rộn nhưng hạnh phúc", scene: "Conj-Phrases" },
+
+                    // Cấp độ 3: Câu ghép hoàn chỉnh
+                    { en: "I'm helping decorate the house, and my brother is busy cooking.", vi: "Tôi đang giúp trang trí nhà, và anh trai tôi thì đang bận nấu ăn.", scene: "Conj-Advanced" },
+                    { en: "I like watching cartoons, but my brother likes watching sports.", vi: "Tôi thích xem hoạt hình, nhưng anh trai tôi lại thích xem thể thao.", scene: "Conj-Advanced" },
+                    { en: "I enjoy sports, so I spend a lot of time outdoors.", vi: "Tôi thích thể thao, cho nên tôi dành nhiều thời gian ở ngoài trời.", scene: "Conj-Advanced" }
+                ]
+            },
+            sportsAndGamesUnit8: {
+                titleEn: "Unit 8: Sports and Games",
+                titleVi: "Bài 8: Thể thao và Trò chơi",
+                data: [
+                    // --- NHÓM TỪ VỰNG RIÊNG (VOCABULARY LIST) ---
+                    { en: "Cycling", vi: "Môn đạp xe", scene: "Vocab: Sport" },
+                    { en: "Swimming", vi: "Môn bơi lội", scene: "Vocab: Sport" },
+                    { en: "Chess", vi: "Cờ vua", scene: "Vocab: Game" },
+                    { en: "Aerobics", vi: "Thể dục nhịp điệu", scene: "Vocab: Sport" },
+                    { en: "Table tennis", vi: "Bóng bàn", scene: "Vocab: Sport" },
+                    { en: "Karate", vi: "Võ karate", scene: "Vocab: Sport" },
+                    { en: "Boating", vi: "Chèo thuyền", scene: "Vocab: Sport" },
+                    { en: "Volleyball", vi: "Bóng chuyền", scene: "Vocab: Sport" },
+                    { en: "Ball", vi: "Quả bóng", scene: "Vocab: Equipment" },
+                    { en: "Racket", vi: "Cái vợt", scene: "Vocab: Equipment" },
+                    { en: "Goggles", vi: "Kính bơi", scene: "Vocab: Equipment" },
+                    { en: "Sports shoes", vi: "Giày thể thao", scene: "Vocab: Equipment" },
+                    { en: "Champion", vi: "Nhà vô địch", scene: "Vocab: Person" },
+                    { en: "Competition", vi: "Cuộc thi", scene: "Vocab: Event" },
+                    { en: "Marathon", vi: "Chạy marathon", scene: "Vocab: Sport" },
+                    { en: "Sporty", vi: "Dáng vẻ thể thao", scene: "Vocab: Adjective" },
+                    { en: "Fit", vi: "Khỏe mạnh, cân đối", scene: "Vocab: Adjective" },
+
+                    // --- NHÓM 1: MÔN THỂ THAO & TRÒ CHƠI (SPORTS & GAMES) ---
+                    { en: "Cycling is a great way to stay healthy. You can cycle there.", vi: "Đạp xe là một cách tuyệt vời để giữ sức khỏe. Bạn có thể đạp xe đến đó.", scene: "Cycling" },
+                    { en: "Swimming is fun in the summer. Can you swim?", vi: "Bơi lội rất vui vào mùa hè. Bạn có biết bơi không?", scene: "Swimming" },
+                    { en: "We play chess every Saturday morning.", vi: "Chúng tôi chơi cờ vua vào mỗi sáng thứ Bảy.", scene: "Chess" },
+                    { en: "Mai does aerobics to keep her body fit.", vi: "Mai tập thể dục nhịp điệu để giữ cơ thể cân đối.", scene: "Aerobics" },
+                    { en: "I played table tennis with my brother yesterday.", vi: "Tôi đã chơi bóng bàn với anh trai vào ngày hôm qua.", scene: "Table tennis" },
+                    { en: "Duong does karate at the club three times a week.", vi: "Dương tập võ karate tại câu lạc bộ ba lần một tuần.", scene: "Karate" },
+                    { en: "They began boating very late in the afternoon.", vi: "Họ đã bắt đầu chèo thuyền vào lúc chiều muộn.", scene: "Boating" },
+                    { en: "Volleyball is a popular team sport in my school.", vi: "Bóng chuyền là một môn thể thao đồng đội phổ biến ở trường tôi.", scene: "Volleyball" },
+                    { en: "Football is often called the king of sports.", vi: "Bóng đá thường được gọi là môn thể thao vua.", scene: "Football" },
+                    { en: "Basketball players are usually very tall.", vi: "Các vận động viên bóng rổ thường rất cao.", scene: "Basketball" },
+
+                    // --- NHÓM 2: DỤNG CỤ THỂ THAO (SPORTS EQUIPMENT) ---
+                    { en: "A ball is used for football and basketball.", vi: "Một quả bóng được dùng cho môn bóng đá và bóng rổ.", scene: "Ball" },
+                    { en: "Please get the racket for me. I want to play badminton.", vi: "Làm ơn lấy cái vợt cho tôi. Tôi muốn chơi cầu lông.", scene: "Racket" },
+                    { en: "You should wear goggles when you go swimming.", vi: "Bạn nên đeo kính bơi khi đi bơi.", scene: "Goggles" },
+                    { en: "I need a new pair of sports shoes for the marathon.", vi: "Tôi cần một đôi giày thể thao mới cho cuộc chạy marathon.", scene: "Sports shoes" },
+                    { en: "The boat is ready for the rowing competition.", vi: "Con thuyền đã sẵn sàng cho cuộc thi chèo thuyền.", scene: "Boat" },
+                    { en: "Don't forget to bring your skateboard to the park.", vi: "Đừng quên mang theo ván trượt của bạn đến công viên.", scene: "Skateboard" },
+
+                    // --- NHÓM 3: TÍNH TỪ & DANH TỪ LIÊN QUAN (ADJECTIVES & NOUNS) ---
+                    { en: "She won an international sports champion title.", vi: "Cô ấy đã giành được danh hiệu nhà vô địch thể thao quốc tế.", scene: "Champion" },
+                    { en: "Are you going to take part in this competition?", vi: "Bạn có định tham gia vào cuộc thi này không?", scene: "Competition" },
+                    { en: "The first marathon took place in Greece in 1896.", vi: "Cuộc chạy marathon đầu tiên diễn ra tại Hy Lạp vào năm 1896.", scene: "Marathon" },
+                    { en: "You look sporty in that new outfit!", vi: "Bạn trông thật dáng vẻ thể thao trong bộ đồ mới đó!", scene: "Sporty" },
+                    { en: "Exercise helps you stay fit and healthy.", vi: "Tập thể dục giúp bạn giữ cơ thể khỏe mạnh và cân đối.", scene: "Fit" },
+                    { en: "The gym is a place where people go to do exercise.", vi: "Phòng tập gym là nơi mọi người đến để tập thể dục.", scene: "Gym" },
+                    { en: "Winning is not everything, it's the sportspersonship that counts.", vi: "Chiến thắng không phải là tất cả, tinh thần thể thao mới là điều quan trọng.", scene: "Sportspersonship" },
+
+                    // --- NHÓM 4: CẤU TRÚC VÀ ĐỘNG TỪ HÀNH ĐỘNG (STRUCTURES & VERBS) ---
+                    { en: "How often do you go cycling? - Once a week.", vi: "Bạn đi đạp xe bao lâu một lần? - Một tuần một lần.", scene: "Question: How often" },
+                    { en: "Which sport do you like playing the most?", vi: "Bạn thích chơi môn thể thao nào nhất?", scene: "Question: Which" },
+                    { en: "I love swimming because it makes me feel relaxed.", vi: "Tôi yêu bơi lội vì nó khiến tôi cảm thấy thư giãn.", scene: "Reason: Because" },
+                    { en: "My father used to be a professional football player.", vi: "Bố tôi từng là một cầu thủ bóng đá chuyên nghiệp.", scene: "Past state" },
+                    { en: "Congratulations! You are the winner of the game.", vi: "Chúc mừng! Bạn là người chiến thắng của trò chơi.", scene: "Congratulations" },
+                    { en: "Last weekend, we went boating on the lake.", vi: "Cuối tuần trước, chúng tôi đã đi chèo thuyền trên hồ.", scene: "Past events" },
+                    { en: "You should warm up before you start doing karate.", vi: "Bạn nên khởi động trước khi bắt đầu tập võ karate.", scene: "Advice" },
+                    { en: "Doing aerobics is a fun way to improve your health.", vi: "Tập thể dục nhịp điệu là một cách vui vẻ để cải thiện sức khỏe.", scene: "Aerobics" },
+
+                    // --- NHÓM 5: THÔNG TIN BỔ SUNG (ADDITIONAL FACTS) ---
+                    { en: "Pelé is regarded as one of the greatest football players of all time.", vi: "Pelé được coi là một trong những cầu thủ bóng đá vĩ đại nhất mọi thời đại.", scene: "Fact: Pelé" },
+                    { en: "The Olympic Games are held every four years.", vi: "Thế vận hội Olympic được tổ chức bốn năm một lần.", scene: "Fact: Olympics" },
+                    { en: "Chess is often called a game of the mind.", vi: "Cờ vua thường được gọi là trò chơi của trí tuệ.", scene: "Fact: Chess" },
+                    { en: "Yoga helps to improve both mental and physical health.", vi: "Yoga giúp cải thiện cả sức khỏe tinh thần và thể chất.", scene: "Fact: Yoga" }
+                ]
+            },
+            grammarUnit8: {
+                titleEn: "Unit 8: Past Simple and Imperatives",
+                titleVi: "Bài: Thì Quá khứ đơn và Câu mệnh lệnh",
+                data: [
+                    // --- PHẦN 1: THÌ QUÁ KHỨ ĐƠN (THE PAST SIMPLE) ---
+
+                    // Từ đơn & Công thức
+                    { en: "Played", vi: "Đã chơi (Quá khứ của Play)", scene: "Past-Vocabulary" },
+                    { en: "Went", vi: "Đã đi (Quá khứ của Go)", scene: "Past-Vocabulary" },
+                    { en: "Did not (Didn't)", vi: "Đã không (Dạng phủ định)", scene: "Past-Vocabulary" },
+                    { en: "Ate", vi: "Đã ăn (Quá khứ của Eat)", scene: "Past-Vocabulary" },
+                    { en: "Drank", vi: "Đã uống (Quá khứ của Drink)", scene: "Past-Vocabulary" },
+                    { en: "Bought", vi: "Đã mua (Quá khứ của Buy)", scene: "Past-Vocabulary" },
+                    { en: "Read", vi: "Đã đọc (Quá khứ của Read)", scene: "Past-Vocabulary" },
+                    { en: "Watched", vi: "Đã xem (Quá khứ của Watch)", scene: "Past-Vocabulary" },
+                    { en: "Cleaned", vi: "Đã dọn dẹp (Quá khứ của Clean)", scene: "Past-Vocabulary" },
+
+                    // Câu ví dụ đơn giản (3-6 từ)
+                    { en: "I played soccer yesterday.", vi: "Tôi đã chơi bóng đá hôm qua.", scene: "Past-Simple" },
+                    { en: "They went to the zoo.", vi: "Họ đã đi đến vườn thú.", scene: "Past-Simple" },
+                    { en: "We saw a big lion.", vi: "Chúng tôi đã thấy một con sư tử lớn.", scene: "Past-Simple" },
+                    { en: "She cooked dinner.", vi: "Cô ấy đã nấu bữa tối.", scene: "Past-Simple" },
+                    { en: "He didn't eat lunch.", vi: "Anh ấy đã không ăn trưa.", scene: "Past-Simple" },
+                    { en: "I didn't see him.", vi: "Tôi đã không thấy anh ấy.", scene: "Past-Simple" },
+                    { en: "Did you sleep well?", vi: "Bạn đã ngủ ngon chứ?", scene: "Past-Simple" },
+                    { en: "Did they win?", vi: "Họ đã thắng phải không?", scene: "Past-Simple" },
+                    { en: "It rained last night.", vi: "Trời đã mưa đêm qua.", scene: "Past-Simple" },
+                    { en: "We finished the test.", vi: "Chúng tôi đã làm xong bài kiểm tra.", scene: "Past-Simple" },
+                    { en: "I ate an apple.", vi: "Tôi đã ăn một quả táo.", scene: "Past-Simple" },
+                    { en: "She drank some milk.", vi: "Cô ấy đã uống ít sữa.", scene: "Past-Simple" },
+                    { en: "He bought a book.", vi: "Anh ấy đã mua một cuốn sách.", scene: "Past-Simple" },
+                    { en: "We read a story.", vi: "Chúng tôi đã đọc một câu chuyện.", scene: "Past-Simple" },
+                    { en: "They watched a movie.", vi: "Họ đã xem một bộ phim.", scene: "Past-Simple" },
+                    { en: "I cleaned my room.", vi: "Tôi đã dọn phòng của mình.", scene: "Past-Simple" },
+                    { en: "She called me.", vi: "Cô ấy đã gọi cho tôi.", scene: "Past-Simple" },
+                    { en: "He ran fast.", vi: "Anh ấy đã chạy nhanh.", scene: "Past-Simple" },
+                    { en: "It was cold.", vi: "Trời đã lạnh.", scene: "Past-Simple" },
+                    { en: "They were happy.", vi: "Họ đã rất hạnh phúc.", scene: "Past-Simple" },
+                    { en: "I didn't cry.", vi: "Tôi đã không khóc.", scene: "Past-Simple" },
+                    { en: "She didn't come.", vi: "Cô ấy đã không đến.", scene: "Past-Simple" },
+                    { en: "Did you go?", vi: "Bạn đã đi phải không?", scene: "Past-Simple" },
+                    { en: "Did he stay?", vi: "Anh ấy đã ở lại à?", scene: "Past-Simple" },
+                    { en: "We worked hard.", vi: "Chúng tôi đã làm việc chăm chỉ.", scene: "Past-Simple" },
+
+                    // --- PHẦN 2: CÂU MỆNH LỆNH (IMPERATIVES) ---
+
+                    // Cấu trúc Khẳng định (V nguyên thể)
+                    { en: "Stand up.", vi: "Hãy đứng dậy.", scene: "Imperative-Positive" },
+                    { en: "Sit down, please.", vi: "Làm ơn hãy ngồi xuống.", scene: "Imperative-Positive" },
+                    { en: "Open your book.", vi: "Hãy mở sách ra.", scene: "Imperative-Positive" },
+                    { en: "Listen to me.", vi: "Hãy nghe tôi này.", scene: "Imperative-Positive" },
+                    { en: "Close the door.", vi: "Hãy đóng cửa lại.", scene: "Imperative-Positive" },
+                    { en: "Keep quiet, please.", vi: "Làm ơn hãy giữ trật tự.", scene: "Imperative-Positive" },
+                    { en: "Eat your breakfast.", vi: "Hãy ăn bữa sáng đi.", scene: "Imperative-Positive" },
+
+                    // Cấu trúc Phủ định (Don't + V)
+                    { en: "Don't talk.", vi: "Đừng nói chuyện.", scene: "Imperative-Negative" },
+                    { en: "Don't run here.", vi: "Đừng chạy ở đây.", scene: "Imperative-Negative" },
+                    { en: "Don't eat in class.", vi: "Đừng ăn trong lớp.", scene: "Imperative-Negative" },
+                    { en: "Don't touch that.", vi: "Đừng chạm vào cái đó.", scene: "Imperative-Negative" },
+                    { en: "Don't shout.", vi: "Đừng la hét.", scene: "Imperative-Negative" },
+                    { en: "Don't forget your hat.", vi: "Đừng quên mũ của bạn.", scene: "Imperative-Negative" },
+                    { en: "Don't park here.", vi: "Đừng đỗ xe ở đây.", scene: "Imperative-Negative" }
+                ]
+            },
+
+
+            citiesOfTheWorldUnit9: {
+                titleEn: "Unit 9: Cities of the World - Full Knowledge",
+                titleVi: "Bài 9: Các thành phố trên thế giới - Tổng hợp toàn diện",
+                data: [
+                    // --- NHÓM TỪ VỰNG RIÊNG (VOCABULARY LIST) ---
+                    { en: "Landmark", vi: "Địa danh, cột mốc nổi tiếng", scene: "Vocab: City" },
+                    { en: "Palace", vi: "Cung điện", scene: "Vocab: City" },
+                    { en: "Old Town", vi: "Phố cổ", scene: "Vocab: City" },
+                    { en: "Floating market", vi: "Chợ nổi", scene: "Vocab: City" },
+                    { en: "Street food", vi: "Thức ăn đường phố", scene: "Vocab: Food" },
+                    { en: "Stall", vi: "Quầy hàng, sạp hàng", scene: "Vocab: Market" },
+                    { en: "Postcard", vi: "Bưu thiếp", scene: "Vocab: Travel" },
+                    { en: "Exciting", vi: "Thú vị, náo nhiệt", scene: "Vocab: Adjective" },
+                    { en: "Crowded", vi: "Đông đúc", scene: "Vocab: Adjective" },
+                    { en: "Clean", vi: "Sạch sẽ", scene: "Vocab: Adjective" },
+                    { en: "Tasty / Delicious", vi: "Ngon, đậm đà", scene: "Vocab: Adjective" },
+                    { en: "Friendly", vi: "Thân thiện", scene: "Vocab: Adjective" },
+                    { en: "Fika", vi: "Văn hóa nghỉ giải lao uống cà phê (Thụy Điển)", scene: "Vocab: Culture" },
+
+                    // --- NHÓM 1: ĐỊA DANH NỔI TIẾNG (LANDMARKS) ---
+                    { en: "Big Ben and the River Thames are famous landmarks in London.", vi: "Big Ben và sông Thames là những địa danh nổi tiếng ở Luân Đôn.", scene: "Landmark: London" },
+                    { en: "London is a historic city, but it is often rainy there.", vi: "Luân Đôn là một thành phố cổ kính, nhưng ở đó trời thường xuyên có mưa.", scene: "Landmark: London" },
+
+                    { en: "The Opera House and beautiful beaches are symbols of Sydney.", vi: "Nhà hát Opera và những bãi biển tuyệt đẹp là biểu tượng của Sydney.", scene: "Landmark: Sydney" },
+                    { en: "The beaches in Sydney are not only beautiful but also very clean.", vi: "Các bãi biển ở Sydney không chỉ đẹp mà còn rất sạch sẽ.", scene: "Landmark: Sydney" },
+
+                    { en: "Times Square and the Statue of Liberty are in New York.", vi: "Quảng trường Thời đại và Tượng Nữ thần Tự do nằm ở New York.", scene: "Landmark: New York" },
+                    { en: "New York is a very crowded city with many exciting places.", vi: "New York là một thành phố rất đông đúc với nhiều địa điểm náo nhiệt.", scene: "Landmark: New York" },
+
+                    { en: "The Temple of Literature is a historic landmark in Ha Noi.", vi: "Văn Miếu là một địa danh lịch sử ở Hà Nội.", scene: "Landmark: Ha Noi" },
+                    { en: "Ha Noi is famous for its delicious street food and old temples.", vi: "Hà Nội nổi tiếng với thức ăn đường phố ngon và những ngôi đền cổ.", scene: "Landmark: Ha Noi" },
+
+                    { en: "Stockholm is famous for its Royal Palace and the Old Town.", vi: "Stockholm nổi tiếng với Cung điện Hoàng gia và Khu Phố Cổ.", scene: "Landmark: Stockholm" },
+                    { en: "You can see a lot of Swedish art in the metro stations in Stockholm.", vi: "Bạn có thể ngắm nhìn rất nhiều tác phẩm nghệ thuật Thụy Điển tại các ga tàu điện ngầm ở Stockholm.", scene: "Landmark: Stockholm" },
+
+                    { en: "Bangkok has the Chatuchak Market with over 15,000 stalls.", vi: "Bangkok có chợ Chatuchak với hơn 15.000 quầy hàng.", scene: "Landmark: Bangkok" },
+                    { en: "Floating markets are a unique feature of Bangkok.", vi: "Chợ nổi là một đặc điểm độc đáo của Bangkok.", scene: "Landmark: Floating market" },
+                    { en: "Bangkok is also famous for its tasty street food and colorful stalls.", vi: "Bangkok cũng nổi tiếng với thức ăn đường phố ngon và những quầy hàng đầy màu sắc.", scene: "Landmark: Bangkok" },
+
+                    // --- NHÓM 2: TÍNH TỪ MIÊU TẢ (ADJECTIVES) ---
+                    { en: "New York is an exciting and crowded city.", vi: "New York là một thành phố náo nhiệt và đông đúc.", scene: "Adj: Exciting / Crowded" },
+                    { en: "The beaches in Sydney are very clean and beautiful.", vi: "Các bãi biển ở Sydney rất sạch sẽ và đẹp đẽ.", scene: "Adj: Clean / Beautiful" },
+                    { en: "The street food in Ha Noi is tasty, delicious, and cheap.", vi: "Thức ăn đường phố ở Hà Nội rất ngon, đậm đà và rẻ.", scene: "Adj: Tasty / Delicious" },
+                    { en: "People in this city are very friendly and helpful.", vi: "Người dân ở thành phố này rất thân thiện và hay giúp đỡ.", scene: "Adj: Friendly / Helpful" },
+                    { en: "Swedish art in the metro is very interesting.", vi: "Nghệ thuật Thụy Điển trong tàu điện ngầm rất thú vị.", scene: "Adj: Art" },
+
+                    // --- NHÓM 3: THỜI TIẾT & VĂN HÓA (WEATHER & CULTURE) ---
+                    { en: "It is often rainy in London.", vi: "Thời tiết thường xuyên có mưa ở Luân Đôn.", scene: "Weather: Rainy" },
+                    { en: "Stockholm can be very cold and snowy in winter.", vi: "Stockholm có thể rất lạnh và có tuyết vào mùa đông.", scene: "Weather: Cold / Snowy" },
+                    { en: "Fika is the Swedish custom of taking a coffee break.", vi: "Fika là thói quen nghỉ giải lao uống cà phê của người Thụy Điển.", scene: "Culture: Fika" },
+                    { en: "I am writing a postcard about my trip to Stockholm.", vi: "Tớ đang viết một tấm bưu thiếp về chuyến đi đến Stockholm.", scene: "Vocab: Postcard" },
+
+                    // --- NHÓM 4: CẤU TRÚC CÂU (GRAMMAR: WHAT...LIKE & EXCLAMATIONS) ---
+                    { en: "What's London like? - It's rainy but historic.", vi: "Luân Đôn như thế nào? - Nó có mưa nhưng cổ kính.", scene: "Grammar: What's it like?" },
+                    { en: "What a beautiful place! I love the beaches here.", vi: "Thật là một nơi tuyệt đẹp! Tớ yêu những bãi biển ở đây.", scene: "Exclamations: What + Adj + N" },
+                    { en: "What a delicious street food! You must try it.", vi: "Thật là một món ăn đường phố ngon lành! Bạn phải thử nó.", scene: "Exclamations: What + Adj + N" },
+                    { en: "What a crowded street! There are so many people.", vi: "Thật là một con phố đông đúc! Có quá nhiều người.", scene: "Exclamations: What + Adj + N" },
+
+                    // --- NHÓM 5: TÍNH TỪ SỞ HỮU (POSSESSIVE ADJECTIVES) ---
+                    { en: "This is my postcard and that is your book.", vi: "Đây là bưu thiếp của tớ và kia là cuốn sách của bạn.", scene: "Possessive Adj: My / Your" },
+                    { en: "His bicycle is new, but her dress is old.", vi: "Xe đạp của cậu ấy mới, nhưng váy của cô ấy thì cũ.", scene: "Possessive Adj: His / Her" },
+                    { en: "Our school is very large and its ball is over there.", vi: "Trường của chúng tớ rất lớn và quả bóng của nó ở đằng kia.", scene: "Possessive Adj: Our / Its" },
+                    { en: "Their room is always clean and beautiful.", vi: "Phòng của họ luôn sạch sẽ và đẹp đẽ.", scene: "Possessive Adj: Their" },
+
+                    // --- NHÓM 6: ĐẠI TỪ SỞ HỮU (POSSESSIVE PRONOUNS) ---
+                    { en: "The postcard is mine. Where is yours?", vi: "Tấm bưu thiếp là của tớ. Của bạn đâu rồi?", scene: "Possessive Pronoun: Mine / Yours" },
+                    { en: "The bicycle is his and the dress is hers.", vi: "Chiếc xe đạp là của cậu ấy và chiếc váy là của cô ấy.", scene: "Possessive Pronoun: His / Hers" },
+                    { en: "The school is ours and the room is theirs.", vi: "Ngôi trường là của chúng tớ và căn phòng là của họ.", scene: "Possessive Pronoun: Ours / Theirs" },
+                    { en: "Is this pen mine or yours?", vi: "Chiếc bút này là của tớ hay của bạn?", scene: "Possessive Pronoun: Mine / Yours" },
+
+                    // --- NHÓM 7: NGỮ ÂM (PRONUNCIATION /aʊ/ & /əʊ/) ---
+                    { en: "Sound /aʊ/: town, house, crowded, around, tower, mouth.", vi: "Âm /aʊ/: thị trấn, nhà, đông đúc, xung quanh, tòa tháp, miệng.", scene: "Phonetics: /aʊ/" },
+                    { en: "Sound /əʊ/: boat, snow, postcard, coast, cold, old, photo.", vi: "Âm /əʊ/: thuyền, tuyết, bưu thiếp, bờ biển, lạnh, cũ, ảnh.", scene: "Phonetics: /əʊ/" },
+
+                    // --- NHÓM 8: TÓM TẮT ĐẶC ĐIỂM THÀNH PHỐ (CITY SUMMARY) ---
+                    { en: "Sydney has the Opera House and exciting beaches.", vi: "Sydney có Nhà hát Opera và những bãi biển náo nhiệt.", scene: "Summary: Sydney" },
+                    { en: "London is famous for Big Ben and it is often rainy.", vi: "Luân Đôn nổi tiếng với Big Ben và trời thường xuyên có mưa.", scene: "Summary: London" },
+                    { en: "New York is crowded but very exciting with Times Square.", vi: "New York đông đúc nhưng rất náo nhiệt với Quảng trường Thời đại.", scene: "Summary: New York" },
+                    { en: "Stockholm is famous for the Royal Palace and Fika culture.", vi: "Stockholm nổi tiếng với Cung điện Hoàng gia và văn hóa Fika.", scene: "Summary: Stockholm" },
+                    { en: "Bangkok has street food and Chatuchak market with many stalls.", vi: "Bangkok có thức ăn đường phố và chợ Chatuchak với nhiều quầy hàng.", scene: "Summary: Bangkok" },
+                    { en: "Ha Noi is famous for the Temple of Literature and tasty food.", vi: "Hà Nội nổi tiếng với Văn Miếu và đồ ăn ngon.", scene: "Summary: Ha Noi" }
+                ]
+            },
+            possessiveUnit9: {
+                titleEn: "Unit 9: Possessives",
+                titleVi: "Bài 9: Các dạng sở hữu",
+                comparisonTable: [
+                    { subject: "I", adjective: "my", pronoun: "mine" },
+                    { subject: "You", adjective: "your", pronoun: "yours" },
+                    { subject: "We", adjective: "our", pronoun: "ours" },
+                    { subject: "They", adjective: "their", pronoun: "theirs" },
+                    { subject: "He", adjective: "his", pronoun: "his" },
+                    { subject: "She", adjective: "her", pronoun: "hers" },
+                    { subject: "It", adjective: "its", pronoun: "its" }
+                ],
+                data: [
+                    { en: "My", vi: "Của tôi", scene: "Vocabulary" },
+                    { en: "Mine", vi: "Của tôi", scene: "Vocabulary" },
+                    { en: "Your", vi: "Của bạn", scene: "Vocabulary" },
+                    { en: "Yours", vi: "Của bạn", scene: "Vocabulary" },
+                    { en: "Our", vi: "Của chúng tôi", scene: "Vocabulary" },
+                    { en: "Ours", vi: "Của chúng tôi", scene: "Vocabulary" },
+                    { en: "Their", vi: "Của họ", scene: "Vocabulary" },
+                    { en: "Theirs", vi: "Của họ", scene: "Vocabulary" },
+                    { en: "His", vi: "Của anh ấy", scene: "Vocabulary" },
+                    { en: "Her", vi: "Của cô ấy", scene: "Vocabulary" },
+                    { en: "Hers", vi: "Của cô ấy", scene: "Vocabulary" },
+                    { en: "Its", vi: "Của nó", scene: "Vocabulary" },
+                    // --- PHẦN 1: TÍNH TỪ SỞ HỮU (Cơ bản - Cụm từ) ---
+                    { en: "My pen", vi: "Cây bút của tôi", scene: "Basic Adjectives" },
+                    { en: "Your book", vi: "Cuốn sách của bạn", scene: "Basic Adjectives" },
+                    { en: "His bicycle", vi: "Xe đạp của anh ấy", scene: "Basic Adjectives" },
+                    { en: "Her new dress", vi: "Chiếc váy mới của cô ấy", scene: "Basic Adjectives" },
+                    { en: "Its ball", vi: "Quả bóng của nó (con vật)", scene: "Basic Adjectives" },
+                    { en: "Our city", vi: "Thành phố của chúng tôi", scene: "Basic Adjectives" },
+                    { en: "Their teacher", vi: "Giáo viên của họ", scene: "Basic Adjectives" },
+                    // --- BỔ SUNG VÀO PHẦN DATA CỦA POSSESSIVEUNIT ---
+
+                    // My & Mine
+                    { en: "My pen", vi: "Cây bút của tôi", scene: "Phrases" },
+                    { en: "This is mine", vi: "Cái này là của tôi", scene: "Phrases" },
+
+                    // Your & Yours
+                    { en: "Your book", vi: "Cuốn sách của bạn", scene: "Phrases" },
+                    { en: "That is yours", vi: "Cái kia là của bạn", scene: "Phrases" },
+
+                    // Our & Ours
+                    { en: "Our city", vi: "Thành phố của chúng tôi", scene: "Phrases" },
+                    { en: "This is ours", vi: "Cái này là của chúng tôi", scene: "Phrases" },
+
+                    // Their & Theirs
+                    { en: "Their teacher", vi: "Giáo viên của họ", scene: "Phrases" },
+                    { en: "That is theirs", vi: "Cái kia là của họ", scene: "Phrases" },
+
+                    // His (Cả hai dạng giống nhau)
+                    { en: "His car", vi: "Xe hơi của anh ấy", scene: "Phrases" },
+                    { en: "This is his", vi: "Cái này là của anh ấy", scene: "Phrases" },
+
+                    // Her & Hers
+                    { en: "Her dress", vi: "Chiếc váy của cô ấy", scene: "Phrases" },
+                    { en: "That is hers", vi: "Cái kia là của cô ấy", scene: "Phrases" },
+
+                    // Its (Cả hai dạng giống nhau)
+                    { en: "Its tail", vi: "Cái đuôi của nó", scene: "Phrases" },
+                    { en: "This is its", vi: "Cái này là của nó", scene: "Phrases" },
+
+                    // Bổ sung thêm các tổ hợp thường gặp trong Unit 9
+                    { en: "My bicycle", vi: "Xe đạp của tôi", scene: "Phrases" },
+                    { en: "Your house", vi: "Nhà của bạn", scene: "Phrases" },
+                    { en: "Her classroom", vi: "Lớp học của cô ấy", scene: "Phrases" },
+                    { en: "Our neighborhood", vi: "Khu phố của chúng tôi", scene: "Phrases" },
+                    { en: "Their country", vi: "Đất nước của họ", scene: "Phrases" },
+                    { en: "His passport", vi: "Hộ chiếu của cậu ấy", scene: "Phrases" },
+                    { en: "This phone is mine", vi: "Chiếc điện thoại này là của tôi", scene: "Phrases" },
+                    { en: "That bag is yours", vi: "Cái túi kia là của bạn", scene: "Phrases" },
+                    { en: "These keys are hers", vi: "Những chiếc chìa khóa này là của cô ấy", scene: "Phrases" },
+                    { en: "Those books are theirs", vi: "Những cuốn sách đó là của họ", scene: "Phrases" },
+
+                    // --- PHẦN 2: TÍNH TỪ SỞ HỮU (Nâng cao - Câu hoàn chỉnh) ---
+                    { en: "This is my pen.", vi: "Đây là chiếc bút của tôi.", scene: "Advanced Adjectives" },
+                    { en: "Sue doesn't like her new dress.", vi: "Sue không thích chiếc váy mới của cô ấy.", scene: "Advanced Adjectives" },
+                    { en: "Billy is riding his bicycle.", vi: "Billy đang cưỡi chiếc xe đạp của anh ấy.", scene: "Advanced Adjectives" },
+                    { en: "London is famous for its old buildings.", vi: "Luân Đôn nổi tiếng với những tòa nhà cổ kính của nó.", scene: "Advanced Adjectives" },
+                    { en: "Our city is very peaceful.", vi: "Thành phố của chúng tôi rất yên bình.", scene: "Advanced Adjectives" },
+                    { en: "Wash your hands before eating.", vi: "Hãy rửa tay của bạn trước khi ăn.", scene: "Advanced Adjectives" },
+
+                    // --- PHẦN 3: ĐẠI TỪ SỞ HỮU (Thay thế cụm danh từ) ---
+                    { en: "This book is mine.", vi: "Cuốn sách này là của tôi.", scene: "Possessive Pronouns" },
+                    { en: "The blue bike is yours.", vi: "Chiếc xe đạp màu xanh là của bạn.", scene: "Possessive Pronouns" },
+                    { en: "These maps are hers.", vi: "Những bản đồ này là của cô ấy.", scene: "Possessive Pronouns" },
+                    { en: "This drawing is mine.", vi: "Bức vẽ này là của tôi.", scene: "Possessive Pronouns" },
+                    { en: "Jakarta is ours.", vi: "Jakarta là của chúng tôi.", scene: "Possessive Pronouns" },
+                    { en: "That car is theirs.", vi: "Chiếc xe hơi đó là của họ.", scene: "Possessive Pronouns" },
+                    { en: "The house on the corner is his.", vi: "Ngôi nhà ở góc đường là của anh ấy.", scene: "Possessive Pronouns" }
+                ]
+            },
+            futureHousesUnit10: {
+                titleEn: "Unit 10: Our Houses in the Future - Ultimate Edition",
+                titleVi: "Bài 10: Ngôi nhà tương lai - Bản đầy đủ nhất",
+                data: [
+                    // --- NHÓM 1: TỪ VỰNG VỀ LOẠI NHÀ & VỊ TRÍ (TYPES & LOCATIONS) ---
+                    { en: "UFO-shaped house", vi: "Nhà hình vật thể bay xác định", scene: "Vocab: House" },
+                    { en: "Cottage in the mountains", vi: "Nhà tranh ở vùng núi", scene: "Vocab: House" },
+                    { en: "Palace on an island", vi: "Cung điện trên một hòn đảo", scene: "Vocab: House" },
+                    { en: "Skyscraper in the city", vi: "Nhà chọc trời trong thành phố", scene: "Vocab: House" },
+                    { en: "On the Moon / In space", vi: "Trên Mặt Trăng / Trong không gian", scene: "Vocab: Location" },
+                    { en: "Under the sea", vi: "Dưới đáy biển", scene: "Vocab: Location" },
+
+                    // --- NHÓM 2: THIẾT BỊ HIỆN ĐẠI & TÍNH NĂNG (APPLIANCES & FEATURES) ---
+                    { en: "Wireless TV helps us contact friends.", vi: "TV không dây giúp chúng ta liên lạc với bạn bè.", scene: "Appliance: TV" },
+                    { en: "Automatic dishwasher cleans all the dishes.", vi: "Máy rửa bát tự động làm sạch tất cả bát đĩa.", scene: "Appliance: Dishwasher" },
+                    { en: "Modern fridge keeps food fresh and orders online.", vi: "Tủ lạnh hiện đại giữ thức ăn tươi và đặt hàng trực tuyến.", scene: "Appliance: Fridge" },
+                    { en: "Washing machine washes and dries clothes.", vi: "Máy giặt giặt và làm khô quần áo.", scene: "Appliance: Laundry" },
+                    { en: "Smart clock and Smartphone", vi: "Đồng hồ thông minh và Điện thoại thông minh", scene: "Appliance: Smart" },
+                    { en: "Solar energy will power the whole house.", vi: "Năng lượng mặt trời sẽ cung cấp điện cho cả ngôi nhà.", scene: "Appliance: Energy" },
+
+                    // --- NHÓM 3: HOẠT ĐỘNG CHI TIẾT CỦA ROBOT (ROBOT ACTIVITIES) ---
+                    { en: "The robot will clean the floors and wash clothes.", vi: "Rô-bốt sẽ lau sàn nhà và giặt quần áo.", scene: "Robot: Housework" },
+                    { en: "It might water the flowers and feed the dogs.", vi: "Nó có thể sẽ tưới hoa và cho chó ăn.", scene: "Robot: Pets" },
+                    { en: "The robot will cook meals and look after children.", vi: "Rô-bốt sẽ nấu ăn và chăm sóc trẻ em.", scene: "Robot: Care" },
+
+                    // --- NHÓM 4: NGỮ PHÁP WILL & MIGHT (FUTURE GRAMMAR) ---
+                    { en: "My house will have twenty rooms and a helicopter.", vi: "Nhà tớ sẽ có 20 phòng và một chiếc trực thăng.", scene: "Grammar: Will" },
+                    { en: "We won't use electric cookers in the future.", vi: "Chúng ta sẽ không dùng nồi cơm điện trong tương lai.", scene: "Grammar: Won't" },
+                    { en: "We might go on holiday to the Moon.", vi: "Chúng ta có thể sẽ đi nghỉ mát trên Mặt Trăng.", scene: "Grammar: Might" },
+                    { en: "It might not rain tomorrow, so we can play outside.", vi: "Trời có thể sẽ không mưa vào mai, nên ta có thể chơi ngoài trời.", scene: "Grammar: Might not" },
+
+                    // --- NHÓM 5: TÍNH TỪ & GIAO TIẾP (ADJECTIVES & SURPRISE) ---
+                    { en: "A hi-tech house is very comfortable and great.", vi: "Một ngôi nhà công nghệ cao thì rất thoải mái và tuyệt vời.", scene: "Adj: Description" },
+                    { en: "Wow! Your new computer looks fantastic!", vi: "Ồ! Cái máy tính mới của bạn trông thật tuyệt!", scene: "English: Surprise" },
+                    { en: "Sounds great! It's such a strange and large building.", vi: "Nghe hay đấy! Đó quả là một tòa nhà kỳ lạ và rộng lớn.", scene: "English: Surprise" },
+
+                    // --- NHÓM 6: TRỌNG ÂM TỪ 2 ÂM TIẾT (STRESS PATTERNS) ---
+                    { en: "Stress on 1st: PIcture, VIllage, KItchen.", vi: "Trọng âm 1: Bức tranh, Ngôi làng, Nhà bếp.", scene: "Phonetics: Stress" },
+                    { en: "Stress on 1st: MOdern, RObo, COttage.", vi: "Trọng âm 1: Hiện đại, Rô-bốt, Nhà tranh.", scene: "Phonetics: Stress" },
+                    { en: "Stress on 1st: PAlace, MOuntain, CHIl-dren.", vi: "Trọng âm 1: Cung điện, Ngọn núi, Trẻ em.", scene: "Phonetics: Stress" }
+                ]
+            },
+            ourGreenerWorldUnit11: {
+                titleEn: "Unit 11: Our Greener World - Full Knowledge Base",
+                titleVi: "Bài 11: Thế giới xanh hơn của chúng ta - Tổng hợp đầy đủ",
+                data: [
+                    // --- PHẦN 1: DANH SÁCH TỪ VỰNG RIÊNG (VOCABULARY LIST) ---
+                    // --- NHÓM CHIẾN DỊCH 3RS ---
+                    { en: "Reduce", vi: "Giảm thiểu (sử dụng ít đi)", scene: "3Rs" },
+                    { en: "Reuse", vi: "Tái sử dụng (dùng lại)", scene: "3Rs" },
+                    { en: "Recycle", vi: "Tái chế (tạo sản phẩm mới)", scene: "3Rs" },
+
+                    // --- NHÓM VẬT LIỆU & RÁC THẢI ---
+                    { en: "Environment", vi: "Môi trường", scene: "Environment" },
+                    { en: "Rubbish / Waste", vi: "Rác thải", scene: "Environment" },
+                    { en: "Plastic bottle", vi: "Chai nhựa", scene: "Material" },
+                    { en: "Plastic bag", vi: "Túi nhựa", scene: "Material" },
+                    { en: "Reusable shopping bag", vi: "Túi mua sắm dùng nhiều lần", scene: "Material" },
+                    { en: "Glass", vi: "Thủy tinh", scene: "Material" },
+                    { en: "Paper", vi: "Giấy", scene: "Material" },
+                    { en: "Metal / Can", vi: "Kim loại / Lon", scene: "Material" },
+                    { en: "Noise pollution", vi: "Ô nhiễm tiếng ồn", scene: "Environment" },
+
+                    // --- NHÓM HÀNH ĐỘNG BẢO VỆ MÔI TRƯỜNG ---
+                    { en: "Pick up rubbish", vi: "Nhặt rác", scene: "Action" },
+                    { en: "Plant trees", vi: "Trồng cây", scene: "Action" },
+                    { en: "Exchange old uniforms", vi: "Trao đổi đồng phục cũ", scene: "Action" },
+                    { en: "Give to charity", vi: "Tặng cho tổ chức từ thiện", scene: "Action" },
+                    { en: "Go on foot / Walk", vi: "Đi bộ", scene: "Action" },
+                    { en: "Cycle", vi: "Đi xe đạp", scene: "Action" },
+
+                    // --- NHÓM TỪ VỰNG DỰ ÁN & SÁNG TẠO ---
+                    { en: "Instead of", vi: "Thay vì", scene: "Preposition" },
+                    { en: "Creative way", vi: "Cách sáng tạo", scene: "Skill" },
+                    { en: "Pencil holder", vi: "Ống cắm bút", scene: "Project" },
+                    { en: "Flower pot", vi: "Chậu hoa", scene: "Project" },
+                    { en: "Show and tell", vi: "Thuyết trình/Trình bày", scene: "Skill" },
+                    { en: "Warning", vi: "Lời cảnh báo", scene: "Skill" },
+                    { en: "Cough", vi: "Ho", scene: "Health" },
+
+                    // --- PHẦN 2: CÁC CÂU VÍ DỤ VÀ NGỮ PHÁP (SENTENCES & GRAMMAR) ---
+                    // --- NHÓM 1: CHIẾN DỊCH 3RS & TỪ VỰNG MÔI TRƯỜNG ---
+                    { en: "Reduce: Try to use less paper and produce less noise.", vi: "Giảm thiểu: Hãy cố gắng sử dụng ít giấy hơn và tạo ra ít tiếng ồn hơn.", scene: "3Rs: Reduce" },
+                    { en: "Reuse: Use old plastic bottles as pencil holders or flower pots.", vi: "Tái sử dụng: Dùng chai nhựa cũ làm ống cắm bút hoặc chậu hoa.", scene: "3Rs: Reuse" },
+                    { en: "Recycle: We can recycle cans, glass, and paper to make new products.", vi: "Tái chế: Chúng ta có thể tái chế lon, thủy tinh và giấy để tạo ra sản phẩm mới.", scene: "3Rs: Recycle" },
+                    { en: "Environment: We should pick up rubbish to protect the environment.", vi: "Môi trường: Chúng ta nên nhặt rác để bảo vệ môi trường.", scene: "Vocab: Environment" },
+                    { en: "Reusable shopping bag: Use this bag instead of plastic bags.", vi: "Túi mua sắm dùng nhiều lần: Hãy dùng túi này thay vì túi nhựa.", scene: "Vocab: Green living" },
+                    { en: "Planting trees and cycling to school help save the Earth.", vi: "Trồng cây và đi xe đạp đến trường giúp giải cứu Trái Đất.", scene: "Vocab: Action" },
+
+                    // --- NHÓM 2: TỪ VỰNG KỸ NĂNG & DỰ ÁN (SKILLS & PROJECT) ---
+                    { en: "Instead of: We should go to school on foot instead of by car.", vi: "Thay vì: Chúng ta nên đi bộ đến trường thay vì đi bằng ô tô.", scene: "Vocab: Skill" },
+                    { en: "Charity: You can give your old clothes to a charity.", vi: "Từ thiện: Bạn có thể tặng quần áo cũ cho một tổ chức từ thiện.", scene: "Vocab: Skill" },
+                    { en: "Uniform fair: Students can exchange their old uniforms here.", vi: "Hội chợ đồng phục: Học sinh có thể trao đổi đồng phục cũ tại đây.", scene: "Vocab: Skill" },
+                    { en: "Creative ways: There are many creative ways to reuse rubbish.", vi: "Những cách sáng tạo: Có nhiều cách sáng tạo để tái sử dụng rác thải.", scene: "Vocab: Project" },
+                    { en: "Show and tell: Present your recycled flower pot to the class.", vi: "Thuyết trình: Hãy trình bày về chậu hoa tái chế của bạn trước lớp.", scene: "Vocab: Project" },
+
+                    // --- NHÓM 3: CÂU ĐIỀU KIỆN LOẠI 1 & CẢNH BÁO (FIRST CONDITIONAL) ---
+                    { en: "If the air isn't fresh, people will cough.", vi: "Nếu không khí không trong lành, mọi người sẽ bị ho.", scene: "Grammar: If type 1" },
+                    { en: "If the water is dirty, a lot of fish will die.", vi: "Nếu nước bẩn, rất nhiều cá sẽ chết.", scene: "Grammar: If type 1" },
+                    { en: "If we plant more trees, the air will be cleaner.", vi: "Nếu chúng ta trồng thêm nhiều cây, không khí sẽ sạch hơn.", scene: "Grammar: If type 1" },
+                    { en: "Warning: Don't give the goldfish too much food. If you do, they will die.", vi: "Cảnh báo: Đừng cho cá vàng ăn quá nhiều. Nếu bạn làm vậy, chúng sẽ chết đấy.", scene: "Grammar: Warning" },
+                    { en: "If people recycle more, there will be less rubbish.", vi: "Nếu mọi người tái chế nhiều hơn, rác thải sẽ ít đi.", scene: "Grammar: If type 1" },
+
+                    // --- NHÓM 4: MẠO TỪ (ARTICLES: A / AN / THE) ---
+                    { en: "A/An: I have a reusable bag and an old bottle.", vi: "A/An: Tớ có một cái túi dùng nhiều lần và một cái chai cũ (nói chung).", scene: "Grammar: Articles" },
+                    { en: "The: The sun is hot. The Earth is our home.", vi: "The: Mặt trời thì nóng. Trái Đất là nhà của chúng ta (vật duy nhất).", scene: "Grammar: Articles" },
+                    { en: "The: I saw a bird. The bird was very beautiful.", vi: "The: Tớ đã thấy một con chim. Con chim đó (đã nhắc tới) rất đẹp.", scene: "Grammar: Articles" },
+
+                    // --- NHÓM 5: NGỮ ÂM & NHỊP ĐIỆU (PRONUNCIATION) ---
+                    { en: "Rhythm in sentences: If we RE-cycle, the world will be GREEN-er.", vi: "Nhịp điệu: (Nhấn mạnh vào các từ in hoa để tạo nhịp điệu khi nói).", scene: "Phonetics: Rhythm" },
+                    { en: "The WA-ter is DIR-ty, so the FISH will DIE.", vi: "Nhịp điệu: Nước bẩn nên cá sẽ chết (luyện nhấn nhịp).", scene: "Phonetics: Rhythm" }
+                ]
+            },
+            robotsUnit12: {
+                titleEn: "Unit 12: Robots - Future and Beyond",
+                titleVi: "Bài 12: Người máy - Tương lai và xa hơn nữa",
+                data: [
+                    // --- PHẦN 1: DANH SÁCH TỪ VỰNG RIÊNG (VOCABULARY LIST) ---
+                    // --- CÁC LOẠI ROBOT ---
+                    { en: "Home robot", vi: "Robot gia đình (nấu ăn, dọn dẹp)", scene: "Type" },
+                    { en: "Worker robot", vi: "Robot công nhân (làm việc ở nhà máy)", scene: "Type" },
+                    { en: "Doctor robot", vi: "Robot bác sĩ (giúp bệnh nhân)", scene: "Type" },
+                    { en: "Teacher robot", vi: "Robot giáo viên (giúp học sinh)", scene: "Type" },
+                    { en: "Space robot", vi: "Robot không gian (thám hiểm hành tinh)", scene: "Type" },
+
+                    // --- ĐỘNG TỪ CHỈ KHẢ NĂNG ---
+                    { en: "Lift heavy things", vi: "Nhấc vật nặng", scene: "Ability" },
+                    { en: "Guard the house", vi: "Canh gác nhà", scene: "Ability" },
+                    { en: "Water the plants", vi: "Tưới cây", scene: "Ability" },
+                    { en: "Do the laundry", vi: "Giặt ủi", scene: "Ability" },
+                    { en: "Make the bed", vi: "Dọn dẹp giường ngủ", scene: "Ability" },
+                    { en: "Understand feelings", vi: "Hiểu cảm xúc", scene: "Ability" },
+                    { en: "Recognize faces", vi: "Nhận diện khuôn mặt", scene: "Ability" },
+                    { en: "Explore planets", vi: "Thám hiểm các hành tinh", scene: "Ability" },
+
+                    // --- TRẠNG TỪ & TỪ VỰNG MỞ RỘNG ---
+                    { en: "Carefully", vi: "Một cách cẩn thận", scene: "Adverb" },
+                    { en: "Easily", vi: "Một cách dễ dàng", scene: "Adverb" },
+                    { en: "Complex feelings", vi: "Cảm xúc phức tạp", scene: "Noun Phrase" },
+                    { en: "Role of robots", vi: "Vai trò của robot", scene: "Noun Phrase" },
+                    { en: "Opinion (Agree/Disagree)", vi: "Ý kiến (Đồng ý/Không đồng ý)", scene: "Skill" },
+                    { en: "Inventions", vi: "Những phát minh", scene: "Noun" },
+
+                    // --- PHẦN 2: CÁC CÂU VÍ DỤ VÀ NGỮ PHÁP (SENTENCES & GRAMMAR) ---
+                    // --- NHÓM 1: KHẢ NĂNG Ở QUÁ KHỨ (COULD / COULDN'T) ---
+                    { en: "My grandfather could write with both hands when he was young.", vi: "Ông của tớ có thể viết bằng cả hai tay khi ông còn trẻ.", scene: "Past Ability" },
+                    { en: "Ten years ago, robots couldn't talk to people.", vi: "Mười năm trước, robot không thể nói chuyện với con người.", scene: "Past Ability" },
+
+                    // --- NHÓM 2: KHẢ NĂNG Ở HIỆN TẠI (CAN / CAN'T) ---
+                    { en: "Home robots can do the dishes and clean the house now.", vi: "Bây giờ robot gia đình có thể rửa bát và dọn dẹp nhà cửa.", scene: "Present Ability" },
+                    { en: "Robots are smart, but they cannot think like humans.", vi: "Robot thông minh, nhưng chúng không thể suy nghĩ như con người.", scene: "Present Ability" },
+
+                    // --- NHÓM 3: KHẢ NĂNG TRONG TƯƠNG LAI (WILL BE ABLE TO) ---
+                    { en: "In 20 years, robots will be able to talk to us.", vi: "Trong 20 năm nữa, robot sẽ có thể nói chuyện với chúng ta.", scene: "Future Ability" },
+                    { en: "Robots won't be able to have complex feelings like us.", vi: "Robot sẽ không thể có những cảm xúc phức tạp như chúng ta.", scene: "Future Ability" },
+                    { en: "Will robots be able to guard our houses in the future?", vi: "Liệu robot có thể canh gác nhà cho chúng ta trong tương lai không?", scene: "Future Ability" },
+
+                    // --- NHÓM 4: VỊ TRÍ LÀM VIỆC & VAI TRÒ (ROLES & LOCATIONS) ---
+                    { en: "Worker robots build houses and move heavy things in factories.", vi: "Robot công nhân xây nhà và di chuyển vật nặng trong nhà máy.", scene: "Worker Robot" },
+                    { en: "Doctor robots help patients and give them medicine in hospitals.", vi: "Robot bác sĩ giúp đỡ bệnh nhân và cho họ uống thuốc trong bệnh viện.", scene: "Doctor Robot" },
+                    { en: "Space robots explore other planets to find water.", vi: "Robot không gian thám hiểm các hành tinh khác để tìm nước.", scene: "Space Robot" },
+
+                    // --- NHÓM 5: NGỮ ĐIỆU XUỐNG (FALLING INTONATION) ---
+                    { en: "What can robots do? (Falling voice at the end)", vi: "Robot có thể làm gì? (Xuống giọng ở cuối câu hỏi Wh-)", scene: "Intonation" },
+                    { en: "I can speak English. (Falling voice at the end)", vi: "Tớ có thể nói tiếng Anh. (Xuống giọng ở cuối câu trần thuật)", scene: "Intonation" },
+                    { en: "Robots can't understand our feelings.", vi: "Robot không thể hiểu được cảm xúc của chúng ta.", scene: "Intonation" }
+                ]
+            },
+            introductionUnit: {
+                titleEn: "Unit: Making Friends",
+                titleVi: "Bài: Kết bạn",
+                data: [
+                    // --- ĐOẠN HỘI THOẠI LÀM QUEN ---
+                    {
+                        en: "Hi, my name is Lan, what’s your name?",
+                        vi: "Chào bạn, tên mình là Lan, tên bạn là gì?",
+                        scene: "Greeting"
+                    },
+                    {
+                        en: "Hi Lan, I’m Minh, I am a new student.",
+                        vi: "Chào Lan, mình là Minh, mình là học sinh mới.",
+                        scene: "Greeting"
+                    },
+                    {
+                        en: "Nice to meet you, Minh, where are you from?",
+                        vi: "Rất vui được gặp bạn, Minh, bạn từ đâu đến?",
+                        scene: "Introduction"
+                    },
+                    {
+                        en: "I am from Da Nang city, and you?",
+                        vi: "Mình đến từ thành phố Đà Nẵng, còn bạn?",
+                        scene: "Introduction"
+                    },
+                    {
+                        en: "I am from Hanoi, how old are you?",
+                        vi: "Mình đến từ Hà Nội, bạn bao nhiêu tuổi rồi?",
+                        scene: "Age"
+                    },
+                    {
+                        en: "I am twelve years old, and you?",
+                        vi: "Mình mười hai tuổi, còn bạn?",
+                        scene: "Age"
+                    },
+                    {
+                        en: "I am twelve too, what is your hobby?",
+                        vi: "Mình cũng mười hai tuổi, sở thích của bạn là gì?",
+                        scene: "Hobby"
+                    },
+                    {
+                        en: "I like swimming, what about you?",
+                        vi: "Mình thích bơi lội, còn bạn thì sao?",
+                        scene: "Hobby"
+                    },
+                    {
+                        en: "I like skip-rope and playing chess.",
+                        vi: "Mình thích nhảy dây và chơi cờ vua.",
+                        scene: "Hobby"
+                    },
+                    {
+                        en: "That is great, let’s be friends!",
+                        vi: "Tuyệt quá, chúng mình làm bạn nhé!",
+                        scene: "Conclusion"
+                    }
+                ]
+            },
+            familyUnit: {
+                titleEn: "Unit: My Family",
+                titleVi: "Bài: Gia đình của tôi",
+                data: [
+                    // --- ĐOẠN HỘI THOẠI VỀ GIA ĐÌNH ---
+                    {
+                        en: "Minh, tell me, how many people are there in your family?",
+                        vi: "Minh ơi cho mình hỏi, nhà bạn có bao nhiêu người vậy?",
+                        scene: "Family Size"
+                    },
+                    {
+                        en: "There are four people in my family: my parents, my sister and me.",
+                        vi: "Nhà mình có 4 người: bố mẹ mình, chị gái và mình.",
+                        scene: "Family Size"
+                    },
+                    {
+                        en: "That’s nice, what does your father do?",
+                        vi: "Hay quá, bố bạn làm nghề gì thế?",
+                        scene: "Occupation"
+                    },
+                    {
+                        en: "My father is a doctor, and your father?",
+                        vi: "Bố mình là bác sĩ, còn bố bạn?",
+                        scene: "Occupation"
+                    },
+                    {
+                        en: "My father is a teacher, and my mother is a nurse.",
+                        vi: "Bố mình là giáo viên, còn mẹ mình là y tá.",
+                        scene: "Occupation"
+                    },
+                    {
+                        en: "Oh, do you have any brothers or sisters?",
+                        vi: "Ồ, bạn có anh chị em gì không?",
+                        scene: "Siblings"
+                    },
+                    {
+                        en: "No, I am an only child in my family.",
+                        vi: "Không, mình là con một trong nhà.",
+                        scene: "Siblings"
+                    },
+                    {
+                        en: "I see, how old is your sister?",
+                        vi: "Mình hiểu rồi, chị gái bạn bao nhiêu tuổi vậy?",
+                        scene: "Siblings"
+                    },
+                    {
+                        en: "She is fifteen years old and she is very kind.",
+                        vi: "Chị ấy 15 tuổi và chị ấy rất tốt bụng.",
+                        scene: "Siblings"
+                    },
+                    {
+                        en: "That is great, I want to meet your family someday!",
+                        vi: "Tuyệt thật, mình muốn gặp gia đình bạn vào một ngày nào đó!",
+                        scene: "Conclusion"
+                    }
+                ]
+            },
+            schoolUnit: {
+                titleEn: "Unit: School Subjects",
+                titleVi: "Bài: Các môn học ở trường",
+                data: [
+                    // --- ĐOẠN HỘI THOẠI VỀ MÔN HỌC ---
+                    {
+                        en: "Hi Minh, what is your favorite subject at school?",
+                        vi: "Chào Minh, môn học yêu thích của bạn ở trường là gì?",
+                        scene: "Favorites"
+                    },
+                    {
+                        en: "I love English because it is very interesting.",
+                        vi: "Mình yêu môn Tiếng Anh vì nó rất thú vị.",
+                        scene: "Favorites"
+                    },
+                    {
+                        en: "That is great, who is your English teacher?",
+                        vi: "Tuyệt quá, giáo viên Tiếng Anh của bạn là ai vậy?",
+                        scene: "Teachers"
+                    },
+                    {
+                        en: "My teacher is Ms. Hoa, she is very friendly.",
+                        vi: "Giáo viên của mình là cô Hoa, cô ấy rất thân thiện.",
+                        scene: "Teachers"
+                    },
+                    {
+                        en: "Oh, do you like Math or Science?",
+                        vi: "Ồ, bạn có thích môn Toán hay Khoa học không?",
+                        scene: "Other Subjects"
+                    },
+                    {
+                        en: "I like Science, but I am not good at Math.",
+                        vi: "Mình thích Khoa học, nhưng mình không giỏi Toán lắm.",
+                        scene: "Other Subjects"
+                    },
+                    {
+                        en: "I see, Math is difficult but it is important.",
+                        vi: "Mình hiểu, môn Toán khó nhưng nó rất quan trọng.",
+                        scene: "Other Subjects"
+                    },
+                    {
+                        en: "When do you have English class?",
+                        vi: "Khi nào thì bạn có tiết Tiếng Anh vậy?",
+                        scene: "Schedule"
+                    },
+                    {
+                        en: "I have English on Mondays and Thursdays.",
+                        vi: "Mình có tiết Tiếng Anh vào thứ Hai và thứ Năm.",
+                        scene: "Schedule"
+                    },
+                    {
+                        en: "Let’s study English together in the library!",
+                        vi: "Chúng mình hãy cùng học Tiếng Anh ở thư viện nhé!",
+                        scene: "Conclusion"
+                    }
+                ]
+            },
+            foodUnit: {
+                titleEn: "Unit: Food and Drinks",
+                titleVi: "Bài: Đồ ăn và Thức uống",
+                data: [
+                    // --- ĐOẠN HỘI THOẠI VỀ ẨM THỰC ---
+                    {
+                        en: "Hi Minh, I am hungry, what is your favorite food?",
+                        vi: "Chào Minh, mình đói quá, món ăn yêu thích của bạn là gì?",
+                        scene: "Favorites"
+                    },
+                    {
+                        en: "My favorite food is chicken, it is very delicious.",
+                        vi: "Món ăn yêu thích của mình là gà, nó rất là ngon.",
+                        scene: "Favorites"
+                    },
+                    {
+                        en: "That sounds good, do you like pizza or hamburgers?",
+                        vi: "Nghe hay đấy, bạn có thích pizza hay bánh hamburger không?",
+                        scene: "Fast Food"
+                    },
+                    {
+                        en: "I like pizza, but I don't like hamburgers.",
+                        vi: "Mình thích pizza, nhưng mình không thích bánh hamburger.",
+                        scene: "Fast Food"
+                    },
+                    {
+                        en: "I see, what about your favorite drink?",
+                        vi: "Mình hiểu rồi, còn thức uống yêu thích của bạn thì sao?",
+                        scene: "Drinks"
+                    },
+                    {
+                        en: "I love orange juice, it is very healthy.",
+                        vi: "Mình yêu nước cam, nó rất tốt cho sức khỏe.",
+                        scene: "Drinks"
+                    },
+                    {
+                        en: "Oh, do you like milk or soda for breakfast?",
+                        vi: "Ồ, bạn thích sữa hay nước ngọt cho bữa sáng?",
+                        scene: "Healthy Habits"
+                    },
+                    {
+                        en: "I drink milk every morning, but I never drink soda.",
+                        vi: "Mình uống sữa mỗi sáng, nhưng mình không bao giờ uống nước ngọt.",
+                        scene: "Healthy Habits"
+                    },
+                    {
+                        en: "That is great, would you like some apple juice now?",
+                        vi: "Tuyệt vời, bạn có muốn một ít nước ép táo bây giờ không?",
+                        scene: "Offering"
+                    },
+                    {
+                        en: "Yes, please, thank you very much!",
+                        vi: "Có chứ, làm ơn, cảm ơn bạn rất nhiều!",
+                        scene: "Offering"
+                    }
+                ]
+            },
+            weatherUnit: {
+                titleEn: "Unit: Weather and Clothing",
+                titleVi: "Bài: Thời tiết và Trang phục",
+                data: [
+                    // --- ĐOẠN HỘI THOẠI VỀ THỜI TIẾT ---
+                    {
+                        en: "Hi Minh, what is the weather like today?",
+                        vi: "Chào Minh, thời tiết hôm nay thế nào nhỉ?",
+                        scene: "Weather Today"
+                    },
+                    {
+                        en: "It is very sunny and hot outside.",
+                        vi: "Bên ngoài trời đang rất nắng và nóng.",
+                        scene: "Weather Today"
+                    },
+                    {
+                        en: "That is great, do you like sunny weather?",
+                        vi: "Tuyệt thật, bạn có thích thời tiết nắng ráo không?",
+                        scene: "Preferences"
+                    },
+                    {
+                        en: "Yes, I do, because I can go swimming.",
+                        vi: "Mình có chứ, vì mình có thể đi bơi.",
+                        scene: "Preferences"
+                    },
+                    {
+                        en: "I see, what are you wearing today?",
+                        vi: "Mình hiểu rồi, hôm nay bạn đang mặc gì thế?",
+                        scene: "Clothing"
+                    },
+                    {
+                        en: "I am wearing a blue T-shirt and shorts.",
+                        vi: "Mình đang mặc một chiếc áo thun xanh và quần soóc.",
+                        scene: "Clothing"
+                    },
+                    {
+                        en: "Oh, do you have a hat for the sun?",
+                        vi: "Ồ, bạn có mang theo mũ để che nắng không?",
+                        scene: "Accessories"
+                    },
+                    {
+                        en: "Yes, I have a red hat in my bag.",
+                        vi: "Có, mình có một chiếc mũ màu đỏ trong cặp.",
+                        scene: "Accessories"
+                    },
+                    {
+                        en: "What do you wear when it is rainy?",
+                        vi: "Bạn thường mặc gì khi trời mưa?",
+                        scene: "Rainy Gear"
+                    },
+                    {
+                        en: "I wear a raincoat and boots to stay dry.",
+                        vi: "Mình mặc áo mưa và đi ủng để giữ cho người khô ráo.",
+                        scene: "Rainy Gear"
+                    }
+                ]
+            }
+        };
+
+        const synth = window.speechSynthesis;
+        const voiceSelect = document.getElementById('voice-select');
+        let voices = [];
+        let currentStoryData = [];
+
+        function loadVoices() {
+            voices = synth.getVoices().filter(v => v.lang.includes('en'));
+            voiceSelect.innerHTML = voices.map((v, i) => `<option value="${i}">${v.name}</option>`).join('');
+        }
+        synth.onvoiceschanged = loadVoices;
+
+        function speak(text) {
+            synth.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            if (voices[voiceSelect.value]) utterance.voice = voices[voiceSelect.value];
+            synth.speak(utterance);
+        }
+
+        // HÀM QUAN TRỌNG: LOAD TRUYỆN THEO LỰA CHỌN
+        function loadStory(storyKey) {
+            const story = allStories[storyKey];
+            if (!story) return;
+
+            document.getElementById('main-title').innerText = story.titleEn;
+            document.getElementById('sub-title').innerText = story.titleVi;
+
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = '<div class="snap-spacer"></div><div class="snap-spacer"></div>';
+            const spacerAfter = gallery.querySelector('.snap-spacer:last-child');
+
+            currentStoryData = story.data;
+
+            currentStoryData.forEach((item, i) => {
+                const card = document.createElement('div');
+                card.className = 'flashcard';
+                card.dataset.index = i;
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-front">
+                            <div class="type-tag">${item.scene}</div>
+                            <div class="english">${item.en}</div>
+                            <div class="audio-icon" onclick="event.stopPropagation(); speak('${item.en.replace(/'/g, "\\'")}')">
+                                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                            </div>
+                        </div>
+                        <div class="card-back">
+                            <div class="type-tag">Dịch Nghĩa</div>
+                            <div class="vietnamese">${item.vi}</div>
+                        </div>
+                    </div>
+                `;
+
+                card.onclick = () => {
+                    if (card.classList.contains('active')) {
+                        card.classList.toggle('flipped');
+                    } else {
+                        card.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+                    }
+                };
+
+                gallery.insertBefore(card, spacerAfter);
+                observer.observe(card);
+            });
+
+            document.getElementById('card-counter').innerText = `1 / ${currentStoryData.length}`;
+            gallery.scrollLeft = 0;
+        }
+
+        // XỬ LÝ DI CHUYỂN
+        window.moveSlide = (direction) => {
+            const cards = document.querySelectorAll('.flashcard');
+            const currentActive = document.querySelector('.flashcard.active');
+            let nextIndex = 0;
+            if (currentActive) nextIndex = parseInt(currentActive.dataset.index) + direction;
+            if (nextIndex >= 0 && nextIndex < cards.length) {
+                cards[nextIndex].scrollIntoView({ behavior: 'smooth', inline: 'center' });
+            }
+        };
+
+        // OBSERVER ĐỂ THEO DÕI THẺ ĐANG XEM
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    document.getElementById('card-counter').innerText = `${parseInt(entry.target.dataset.index) + 1} / ${currentStoryData.length}`;
+                } else {
+                    entry.target.classList.remove('active', 'flipped');
+                }
+            });
+        }, { root: document.getElementById('gallery'), threshold: 0.7 });
+
+        // HIỆU ỨNG SAO BAY (Giữ nguyên của bạn)
+        const canvas = document.getElementById('stars-canvas');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+        function initCanvas() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            stars = [];
+            for (let i = 0; i < 60; i++) {
+                stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 1.5, opacity: Math.random(), speed: 0.01 });
+            }
+        }
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(s => {
+                s.opacity += s.speed; if (s.opacity > 1 || s.opacity < 0.2) s.speed = -s.speed;
+                ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`;
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        window.onload = () => {
+            initCanvas();
+            animate();
+            loadVoices();
+
+            // Tự động tạo danh sách bài học từ allStories
+            const selector = document.getElementById('story-selector');
+            selector.innerHTML = Object.keys(allStories).map(key =>
+                `<option value="${key}">${allStories[key].titleEn} (${allStories[key].titleVi})</option>`
+            ).join('');
+
+            // SỬA Ở ĐÂY: Thay 'snowWhite' bằng 'televisionUnit7' để khớp với database mới
+            loadStory('televisionUnit7');
+        };
+
+        window.addEventListener('resize', initCanvas);
+    </script>
+</body>
+
+</html>
